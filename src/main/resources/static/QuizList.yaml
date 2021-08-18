@@ -1,0 +1,81 @@
+channel: test_channel
+list:
+  - creator: david
+    resource: file
+    source: none
+    method: none
+    pattern:
+      - "^[a-zA-Z ]+on$"
+      - "^is[a-zA-Z ]+on$"
+    question:
+      - "Is it on"
+    answer: yeah, as you see
+  - creator: david
+    resource: file
+    source: none
+    method: none
+    pattern:
+      - "^$"
+    question:
+      - "how to add"
+    answer: add question in yaml file
+  - creator: david
+    resource: file
+    source: none
+    method: none
+    pattern:
+      - "^$"
+    question:
+      - "any others"
+    answer: text2
+  - creator: david
+    resource: rest
+    source: http://140.121.197.130:9040/eureka/apps
+    method: get:xml
+    pattern:
+      - "^$"
+    question:
+      - "app data"
+    answer: get service app data
+---
+channel: text2
+list:
+  - creator: david
+    resource: file
+    source: none
+    method: none
+    pattern:
+      - "^$"
+    question:
+      - "where is it"
+    answer: this is channel text2
+---
+channel: prototype
+list:
+  - creator: prototype
+    resource: file
+    source: none
+    method: none
+    pattern:
+      - "^$"
+    question:
+      - "fixed question"
+    answer: fixed answer
+  - creator: prototype
+    resource: rest
+    source: url
+    method: get:contentType
+    pattern:
+      - "^$"
+    question:
+      - "get-command"
+    answer: anything
+  - creator: prototype
+    resource: rest
+    source: url
+    method: post:contentType
+    pattern:
+      - "^$"
+    question:
+      - "post-command"
+    answer: requestBody?
