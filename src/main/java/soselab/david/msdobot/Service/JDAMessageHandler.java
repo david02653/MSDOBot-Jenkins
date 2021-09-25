@@ -52,14 +52,13 @@ public class JDAMessageHandler {
         else
             channel.sendMessage(msg).queue();
     }
-    /* in case needs to send message to other channel */
-    public void sendMessage(MessageReceivedEvent event, String id, String msg){}
-    public void sendMessage(MessageReceivedEvent event, long id, String msg){}
-    public void sendMessage(MessageReceivedEvent event, String msg){}
-
-    public void sendEmbedMessage(String title, ArrayList<String> content){
-        // todo: send embed message
+    public void sendMessage(TextChannel channel, MessageEmbed msg){
+        channel.sendMessage(msg).queue();
     }
+    /* in case needs to send message to other channel */
+//    public void sendMessage(MessageReceivedEvent event, String id, String msg){}
+//    public void sendMessage(MessageReceivedEvent event, long id, String msg){}
+//    public void sendMessage(MessageReceivedEvent event, String msg){}
 
     /**
      * send embedMessage to target text channel

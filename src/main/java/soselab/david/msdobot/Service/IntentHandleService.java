@@ -15,6 +15,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 import soselab.david.msdobot.Entity.Eureka.Application;
 import soselab.david.msdobot.Entity.Eureka.EurekaResponse;
 import soselab.david.msdobot.Entity.Eureka.Instance;
@@ -22,12 +24,12 @@ import soselab.david.msdobot.Entity.Jenkins.*;
 import soselab.david.msdobot.Entity.Rasa.IntentSet;
 import soselab.david.msdobot.Exception.RequestFailException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.awt.*;
+import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,7 +43,6 @@ import java.util.regex.Pattern;
  */
 @Service
 public class IntentHandleService {
-    // todo: consider add message report to some kind of master service to manage all bots
 
     /* endpoint path from properties */
     private final String zuulEndpoint;
@@ -57,7 +58,6 @@ public class IntentHandleService {
 //    private final AdditionalQAService additionalQAService;
     private final LongMessageService longMessageService;
 
-    // todo: jdaMessageHandle, jdaMemberHandle: future feature, may or may not be updated
     /* required service */
     private JDAMessageHandler jdaMessageHandler;
 
@@ -87,7 +87,7 @@ public class IntentHandleService {
      */
     public String checkIntent(IntentSet set) throws RequestFailException, JsonProcessingException {
         String intent = set.getIntent();
-        String service = set.getService();
+        String service = set.getJobName();
 
         /* bot help and intent with no service dependency */
         switch (intent){
@@ -125,6 +125,103 @@ public class IntentHandleService {
     }
 
     /**
+     * handle intent about jenkins
+     * should return MessageEmbed object
+     * workflow:
+     * 1. check incoming intent
+     * 2. if service name required, check if service name received, return error message if something goes wrong with service name
+     * 3. return result (EmbedMessage)
+     * @param set incoming intent
+     */
+    public List<MessageEmbed> checkJenkinsIntent(IntentSet set) throws RequestFailException {
+        String intent = set.getIntent();
+        String service = set.getJobName();
+        switch(intent){
+            case "greet":
+                return greeting();
+            case "help":
+                return jenkinsBotHelp();
+        }
+        /* no service name required */
+        switch(intent){
+            case "ask_job_view_list":
+                return getJenkinsViewsMsg();
+            case "ask_job_list":
+                return getJenkinsViewDetailMsg("All");
+            case "ask_plugin_info":
+                return getJenkinsPluginMsg();
+            case "ask_system_all_build":
+                return getJenkinsBuildRssMsg("all");
+            case "ask_system_failed_build":
+                return getJenkinsBuildRssMsg("failed");
+            case "ask_system_latest_build":
+                return getJenkinsBuildRssMsg("latest");
+            case "ask_jenkins_log":
+                return getJenkinsLogMsg("all");
+            case "ask_jenkins_severe_log":
+                return getJenkinsLogMsg("severe");
+            case "ask_jenkins_warning_log":
+                return getJenkinsLogMsg("warning");
+            // get env info
+            // get credential
+        }
+        /* object name required, check if service name exist */
+        if(service == null || service.equals("None")){
+            // target name missing, return error message
+            System.out.println("[DEBUG][intent analyze][missing target service]: " + intent);
+            return missingJenkinsObjectName(set);
+        }
+        switch (intent){
+            case "ask_view_detail":
+                return getJenkinsViewDetailMsg(service);
+            case "ask_job_health_report":
+                return getHealthReportMsg(service);
+            case "ask_build_result":
+                return getJobLastBuildResultMsg(service);
+            case "ask_job_test_report":
+                return getJenkinsTestReportMsg(service);
+            case "ask_last_build_report":
+                return getJenkinsJobOverview(service);
+            // get job git update
+        }
+        return noMatchedIntent(intent);
+    }
+
+    private List<MessageEmbed> noMatchedIntent(String intent){
+        EmbedBuilder builder = new EmbedBuilder();
+        builder.setDescription("No intent found matched with [" + intent + "].");
+        builder.setTitle("Oops");
+        return Collections.singletonList(builder.build());
+    }
+
+    //- greet
+    //- help
+    //- ask_job_view_list
+    //- ask_view_detail
+    //- ask_job_list
+    //- ask_job_test_report
+    //- ask_job_health_report
+    //- ask_build_result
+    //- ask_last_build_report
+    //- ask_job_git_update
+    //- ask_system_latest_build
+    //- ask_system_failed_build
+    //- ask_system_all_build
+    //- ask_jenkins_log
+    //- ask_jenkins_server_log
+    //- ask_jenkins_warning_log
+    //- ask_plugin_info
+    //- ask_env_info
+    //- ask_credential_info
+
+    public List<MessageEmbed> greeting(){
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setDescription("Hi ! How can i help you ?");
+        return Collections.singletonList(builder.build());
+    }
+
+    /**
      * create user guide message
      * build an embed message and return
      * note: implements action_bot_help in MSABot
@@ -141,23 +238,29 @@ public class IntentHandleService {
                 "~~8. Get the dependency graph from VMAMV.~~ ";
     }
 
-    public MessageEmbed jenkinsBotHelp(){
+    public List<MessageEmbed> jenkinsBotHelp(){
         EmbedBuilder embedBuilder = new EmbedBuilder();
-        embedBuilder.setAuthor("MSDOBot Jenkins");
+//        embedBuilder.setAuthor("MSDOBot Jenkins");
         embedBuilder.setColor(Color.WHITE);
         embedBuilder.setTitle("How to use :thinking:");
         String helpMsg =
-                "1. Search the service health data.\n" +
-                "2. Search the service's information.\n" +
-                "3. Search the service's overview.\n" +
-                "4. Search the service's api list.\n" +
-                "5. Search the env setting.\n" +
-                "6. Search the build data on Jenkins.\n" +
-                "7. Search the connection status on Eureka.\n";
+                "1. Get current view list on Jenkins.\n" +
+                "2. Get detail info about single view.\n" +
+                "3. Get current job list on Jenkins.\n" +
+                "4. Get health report about single job.\n" +
+                "5. Get build result about single job.\n" +
+                "6. Get test report about single job.\n" +
+                "7. Get info about recent build on Jenkins.\n" +
+                "8. Get info about failed build on Jenkins.\n" +
+                "9. Get info about latest build on Jenkins.\n" +
+                "10. Get Jenkins system log.\n" +
+                "11. Get Jenkins system log (severe).\n" +
+                "12. Get Jenkins system log (warning).\n" +
+                "13. Get info about current plugin on Jenkins.";
         embedBuilder.setDescription(helpMsg);
         embedBuilder.setTimestamp(Instant.now());
         embedBuilder.setFooter("bot help");
-        return embedBuilder.build();
+        return Collections.singletonList(embedBuilder.build());
     }
 
     /**
@@ -474,6 +577,38 @@ public class IntentHandleService {
     }
 
     /**
+     * do same thing as requestLastTestCaseDetail, return JenkinsTestReport object instead
+     * @param service target service name
+     * @return test case object
+     */
+    public JenkinsTestReport getLastTestCaseDetail(String service) throws RequestFailException {
+        // request for last build number
+        String statusUrl = jenkinsEndpoint + "/job/" + service + "/api/json?depth=2&tree=lastBuild[number]";
+        System.out.println("[DEBUG][requestLastTestCaseDetail][statusUrl]: " + statusUrl + "");
+        ResponseEntity<String> statusResp = fireBasicAuthJenkinsRequest(statusUrl, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        Gson gson = new Gson();
+        JsonObject statusObj = gson.fromJson(statusResp.getBody(), JsonObject.class);
+        String buildNumber = statusObj.getAsJsonObject("lastBuild").get("number").getAsString();
+        String url = jenkinsEndpoint + "/job/" + service + "/" + buildNumber + "/testReport/api/json";
+        System.out.println("[DEBUG][requestLastTestCaseDetail][Url]: " + url + "");
+        // request for last build test report
+        ResponseEntity<String> detailResp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        JsonObject detailObj = gson.fromJson(detailResp.getBody(), JsonObject.class);
+        StringBuilder builder = new StringBuilder();
+        JsonArray suites = detailObj.get("suites").getAsJsonArray();
+        int totalDuration = detailObj.get("duration").getAsInt();
+        int totalFailedCount = detailObj.get("failCount").getAsInt();
+        int totalPassedCount = detailObj.get("passCount").getAsInt();
+        int totalSkipCount = detailObj.get("skipCount").getAsInt();
+        // create result instance
+        JenkinsTestReport testReport = JenkinsTestReport.createJenkinsTestReport(totalDuration, totalFailedCount, totalPassedCount, totalSkipCount);
+        testReport.setTestSuites(getTestSuiteDetails(suites));
+//            testReport.setReportDetailUrl(additionalQAService.insertMessage(testReport.getTestSuites().toString()));
+        testReport.setReportDetailUrl(longMessageService.getUrl(longMessageService.addMessage(gson.toJson(testReport.getTestSuites()))));
+        return testReport;
+    }
+
+    /**
      * extract information from test suites
      * including suite name and suite duration
      * call another method to access detail test case information
@@ -651,6 +786,64 @@ public class IntentHandleService {
     }
 
     /**
+     * get all jenkins view list
+     * only return with view name and view link
+     * @return
+     * @throws RequestFailException
+     */
+    public List<MessageEmbed> getJenkinsViewsMsg() throws RequestFailException {
+        HashMap<String, JenkinsView> viewList = getAllJenkinsViews();
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("Jenkins view list");
+        for(Map.Entry<String, JenkinsView> entry: viewList.entrySet()){
+            if(builder.getFields().size() >= 25){
+                builder.setFooter("too many views ! consider check jenkins for complete information.");
+                break;
+            }
+            String viewName = entry.getKey();
+//            JenkinsView view = entry.getValue();
+            builder.addField(new MessageEmbed.Field(viewName, generateViewLink(viewName), false));
+        }
+        return Collections.singletonList(builder.build());
+    }
+
+    /**
+     * get detail of certain jenkins view
+     * return with view name, job list, job url
+     * @param viewName
+     * @return
+     * @throws RequestFailException
+     */
+    public List<MessageEmbed> getJenkinsViewDetailMsg(String viewName) throws RequestFailException {
+        HashMap<String, JenkinsView> viewList = getAllJenkinsViews();
+        EmbedBuilder builder = new EmbedBuilder();
+        JenkinsView targetView;
+        if(viewName.equals("All"))
+            targetView = viewList.get("all");
+        else
+            targetView = viewList.get(viewName);
+        System.out.println(targetView);
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("[Jenkins View] " + viewName);
+        for(Map.Entry<String, JenkinsJob> view: targetView.getJobList().entrySet()){
+            if(builder.getFields().size() >= 25){
+                builder.setFooter("too many jobs ! check [this link]("+generateViewLink(viewName)+") for complete information.");
+                break;
+            }
+            String jobName = view.getKey();
+            String jobType = view.getValue().getType();
+            String jobUrl = view.getValue().getUrl();
+            builder.addField(new MessageEmbed.Field(jobName, "["+jobType+"] "+jobUrl, false));
+        }
+        return Collections.singletonList(builder.build());
+    }
+
+    private String generateViewLink(String viewName){
+        return jenkinsEndpoint + "/view/" + viewName;
+    }
+
+    /**
      * get all views on jenkins.
      * response json format should look like this:
      * {
@@ -672,7 +865,7 @@ public class IntentHandleService {
      *     ]
      * }
      * we need jenkins job type/name/url and view name here
-     * @return
+     * @return hashmap of jenkins views
      */
     public HashMap<String, JenkinsView> getAllJenkinsViews() throws RequestFailException {
         // request url
@@ -689,8 +882,8 @@ public class IntentHandleService {
             for(JsonElement view: views){
                 JsonObject viewObj = view.getAsJsonObject();
                 String viewType = viewObj.get("_class").getAsString();
-                if(extractJenkinsPackageName(viewType).equals("AllView"))
-                    continue; // ignore all job view
+//                if(extractJenkinsPackageName(viewType).equals("AllView"))
+//                    continue; // ignore all job view
                 String viewName = viewObj.get("name").getAsString();
                 HashMap<String, JenkinsJob> jobMap = new HashMap<>();
                 // extract job information
@@ -747,5 +940,310 @@ public class IntentHandleService {
             return resultView;
         }
         return resultView;
+    }
+
+    /**
+     * create embed message about missing target name (job name or view name)
+     * @return embed message
+     */
+    private List<MessageEmbed> missingJenkinsObjectName(IntentSet intent){
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("Something goes wrong");
+//        builder.setDescription("Seems like you are willing to query about some view or job but target name is missing.");
+        builder.setDescription("Maybe service name is missing.\n" +
+                "[" + intent.getIntent() + "] queried. Entity [" + intent.getJobName() + "] found.");
+        builder.setTimestamp(Instant.now());
+        builder.setFooter("Bot Hint");
+        return Collections.singletonList(builder.build());
+    }
+
+    public List<MessageEmbed> getHealthReportMsg(String targetName) throws RequestFailException {
+        String query = "/job/" + targetName + "/api/json?depth=2&tree=healthReport[*]";
+        String url = jenkinsEndpoint + query;
+        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        Gson gson = new Gson();
+        JsonObject response = gson.fromJson(resp.getBody(), JsonObject.class);
+        JsonArray healthReport = response.getAsJsonArray("healthReport");
+        JsonObject buildStability = healthReport.get(0).getAsJsonObject();
+        JsonObject testResult = healthReport.get(1).getAsJsonObject();
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("[Jenkins Health Report] " + targetName);
+        builder.addField(buildStability.get("description").getAsString().split(":")[0], buildStability.get("description").getAsString().split(":")[1].strip(), false);
+        builder.addField(testResult.get("description").getAsString().split(":")[0], testResult.get("description").getAsString().split(":")[1].strip(), false);
+        return Collections.singletonList(builder.build());
+    }
+
+    public List<MessageEmbed> getJenkinsJobOverview(String jobName) throws RequestFailException {
+        String query = "/job/" + jobName + "/api/json?depth=2&tree=description,url,healthReport[*],keepDependencies,lastBuild[*[*[*[*]]]],scm[userRemoteConfigs[*],branches[*]]";
+        String url = jenkinsEndpoint + query;
+        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        EmbedBuilder builder = new EmbedBuilder();
+        Gson gson = new Gson();
+        JsonObject jsonResp = gson.fromJson(resp.getBody(), JsonObject.class); // json object of complete response from endpoint
+        JsonArray healthReport = jsonResp.get("healthReport").getAsJsonArray(); // health report: test result, build stability
+        String testResult = healthReport.get(0).getAsJsonObject().get("description").getAsString();
+        String buildStability = healthReport.get(1).getAsJsonObject().get("description").getAsString();
+        JsonObject scm = jsonResp.get("scm").getAsJsonObject();
+        String branch = scm.get("branches").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
+        String remoteUrl = scm.get("userRemoteConfigs").getAsJsonArray().get(0).getAsJsonObject().get("url").getAsString();
+        JsonObject lastBuildInfo = jsonResp.get("lastBuild").getAsJsonObject();
+        String displayName = lastBuildInfo.get("displayName").getAsString();
+        int duration = lastBuildInfo.get("duration").getAsInt();
+        String buildResult = lastBuildInfo.get("result").getAsString();
+        String jobUrl = lastBuildInfo.get("url").getAsString();
+        JsonArray gitCommit = lastBuildInfo.get("changeSet").getAsJsonObject().get("items").getAsJsonArray();
+        /* embed message content build */
+        builder.setTitle("[Build Report] :" + jobName);
+        builder.setDescription("This job is build from branch '" + branch.split("/")[1] + "' on " + remoteUrl + "\n" +
+                               "Check " + jobUrl + " for complete detail.");
+        builder.addField("Build Number", displayName, true);
+        builder.addField("Build Result", buildResult, true);
+        builder.addField("Duration", Integer.toString(duration), true);
+        builder.addField("[Health Report] Test Result", testResult.split(":")[1].strip(), false);
+        builder.addField("[Health Report] Build Stability", buildStability.split(":")[1].strip(), false);
+        builder.addField("Git Info", gitUpdateCount(gitCommit), false);
+        return Collections.singletonList(builder.build());
+    }
+
+    /**
+     * count how many commit pushed since the last build, of example: this build is #3 then count all commit between #2 and #3
+     * count how many file are affected in those commit
+     * return summary info
+     * @param gitUpdateInfo git update json array
+     * @return git update simple summary info
+     */
+    private String gitUpdateCount(JsonArray gitUpdateInfo){
+        int commitNumber = gitUpdateInfo.size();
+        Set<String> affectedFile = new HashSet<>();
+        for(JsonElement item: gitUpdateInfo){
+            JsonArray affectedPaths = item.getAsJsonObject().get("affectedPaths").getAsJsonArray();
+            for(JsonElement paths: affectedPaths){
+                affectedFile.add(paths.getAsString());
+            }
+        }
+        return commitNumber + " commits pushed since last build, " + affectedFile.size() + " file are affected.";
+    }
+
+    public List<MessageEmbed> getJobLastBuildResultMsg(String jobName) throws RequestFailException {
+        String query = "/job/" + jobName + "/api/json?depth=2&tree=lastBuild[result]";
+        String url = jenkinsEndpoint + query;
+        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        Gson gson = new Gson();
+        JsonObject result = gson.fromJson(resp.getBody(), JsonObject.class);
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("[Jenkins Last Build Result] " + jobName);
+        builder.setDescription(result.get("lastBuild").getAsJsonObject().get("result").getAsString());
+        return Collections.singletonList(builder.build());
+    }
+
+    public List<MessageEmbed> getJenkinsPluginMsg() throws RequestFailException {
+        String query = "/pluginManager/api/json?depth=2&tree=plugins[shortName,longName,version,active,hasUpdate,url]";
+        String url = jenkinsEndpoint + query;
+        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+        Gson gson = new Gson();
+        JsonObject response = gson.fromJson(resp.getBody(), JsonObject.class);
+        JsonArray pluginList = response.get("plugins").getAsJsonArray();
+        EmbedBuilder builder = new EmbedBuilder();
+//        builder.setAuthor("MSDOBot Jenkins");
+        builder.setTitle("Plugin Information");
+        // create detail info using long message service
+        builder.setDescription(longMessageService.getUrl(longMessageService.addMessage(pluginList.toString())));
+        for(JsonElement element: pluginList){
+            if(builder.getFields().size() >=25){
+                builder.setFooter("too many plugins! check url for more detail information.");
+            }
+            JsonObject plugin = element.getAsJsonObject();
+            builder.addField(plugin.get("shortName").getAsString(), createJenkinsPluginDescription(plugin.get("version").getAsString(), plugin.get("hasUpdate").getAsBoolean(), plugin.get("active").getAsBoolean()), false);
+        }
+        return Collections.singletonList(builder.build());
+    }
+
+    private String createJenkinsPluginDescription(String version, Boolean hasUpdate, Boolean active){
+        String updateStatus;
+        if(hasUpdate)
+            updateStatus = "has available update";
+        else
+            updateStatus = "no available update";
+        if(active)
+            return "[active] version: " + version + ", " + updateStatus;
+        else
+            return "[inactive] version: " + version + ", " + updateStatus;
+    }
+
+    public List<MessageEmbed> getJenkinsLogMsg(String type){
+        String query = "/log/rss";
+        String title = "";
+        switch (type){
+            case "severe":
+                query = query.concat("?level=SEVERE");
+                title = "Jenkins Log (SEVERE)";
+                break;
+            case "warning":
+                query = query.concat("?level=WARNING");
+                title = "Jenkins Log (WARNING)";
+                break;
+            default:
+                title = "Jenkins Log (All)";
+        }
+        String url = jenkinsEndpoint + query;
+        EmbedBuilder builder = new EmbedBuilder();
+        try{
+            ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+            Document doc = JenkinsXMLParser.loadXML(resp.getBody());
+            JenkinsLog resultLog = JenkinsXMLParser.parseJenkinsLog(doc, longMessageService);
+            // parse jenkins log into discord embed message
+//            builder.setAuthor("MSDOBot Jenkins");
+            builder.setTitle(title);
+            builder.setDescription(url);
+            ArrayList<JenkinsLogEntry> entryList = resultLog.getEntries();
+            if(entryList == null){
+                // no log found
+                builder.addField("No Log Found !", "log is current empty.", false);
+                System.out.println("[DEBUG][Jenkins Log Msg] no available log record found.");
+                return Collections.singletonList(builder.build());
+            }
+            for(JenkinsLogEntry log: entryList){
+                if(builder.getFields().size() >= 25) {
+                    builder.setFooter("too many logs, check url for complete information.");
+                    break;
+                }
+                builder.addField(log.getPublishedTime(), log.getContent(), false);
+            }
+        } catch (RequestFailException e) {
+            System.out.println("[DEBUG][JenkinsLog] url request goes wrong.");
+            e.printStackTrace();
+        } catch (ParserConfigurationException e) {
+            System.out.println("[DEBUG][JenkinsLog] xml parser creating goes wrong.");
+            e.printStackTrace();
+        } catch (IOException | SAXException e) {
+            System.out.println("[DEBUG][JenkinsLog] xml parsing goes wrong.");
+            e.printStackTrace();
+        }
+        return Collections.singletonList(builder.build());
+    }
+//    public MessageEmbed getJenkinsSevereLogMsg(){
+//        String query = "/log/rss?level=SEVERE";
+//        String url = jenkinsEndpoint + query;
+//        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+//        Document doc = JenkinsXMLParse.loadXML(resp.getBody());
+//        return null;
+//    }
+//    public MessageEmbed getJenkinsWarningLogMsg(){
+//        String query = "/log/rss?level=WARNING";
+//        String url = jenkinsEndpoint + query;
+//        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+//        Document doc = JenkinsXMLParse.loadXML(resp.getBody());
+//        return null;
+//    }
+
+    public List<MessageEmbed> getJenkinsBuildRssMsg(String type){
+        String query = "";
+        String buildType = "";
+        switch(type){
+            case "failed":
+                query = "/view/all/rssFailed";
+                buildType = "Failed Build";
+                break;
+            case "latest":
+                query = "/view/all/rssLatest";
+                buildType = "Latest Build";
+                break;
+            default:
+                query = "/view/all/rssAll";
+                buildType = "All Recent Build";
+        }
+        String url = jenkinsEndpoint + query;
+        EmbedBuilder builder = new EmbedBuilder();
+        try{
+            ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+            Document doc = JenkinsXMLParser.loadXML(resp.getBody());
+//            builder.setAuthor("MSDOBot Jenkins");
+            builder.setTitle(buildType);
+            builder.setDescription(url);
+            ArrayList<JenkinsBuildFeed> buildList = JenkinsXMLParser.parseJenkinsBuildAtomFeed(doc);
+            for(JenkinsBuildFeed build: buildList){
+                if(builder.getFields().size() >= 25){
+                    builder.setFooter("too many builds, check url for complete information");
+                    break;
+                }
+                builder.addField(build.getJobName() + " #" + build.getBuildNumber(),
+                        "status: " + build.getSummary() + "\n" + "published time: " + build.getPublishedTime(),
+                        false);
+            }
+        } catch (RequestFailException e) {
+            System.out.println("[DEBUG][BuildRss] url request goes wrong.");
+            e.printStackTrace();
+        } catch (ParserConfigurationException e) {
+            System.out.println("[DEBUG][BuildRss] xml parser creating goes wrong.");
+            e.printStackTrace();
+        } catch (IOException | SAXException e) {
+            System.out.println("[DEBUG][BuildRss] xml parsing goes wrong.");
+            e.printStackTrace();
+        }
+        return Collections.singletonList(builder.build());
+    }
+//    public MessageEmbed getJenkinsRecentFailedBuildMsg(){
+//        String query = "/view/all/rssFailed";
+//        String url = jenkinsEndpoint + query;
+//        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+//        Document doc = JenkinsXMLParser.loadXML(resp.getBody());
+//        return null;
+//    }
+//    public MessageEmbed getJenkinsLatestBuildMsg(){
+//        String query = "/view/all/rssLatest";
+//        String url = jenkinsEndpoint + query;
+//        ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
+//        Document doc = JenkinsXMLParser.loadXML(resp.getBody());
+//        return null;
+//    }
+
+    /**
+     * turn jenkinsTestReport into discord message
+     * will contain multiple embed message if multiple suite found
+     * note that only up to 10 messageEmbed can be placed in a message
+     * only up to 25 field can be placed in a messageEmbed
+     * @param service
+     * @return
+     */
+    public List<MessageEmbed> getJenkinsTestReportMsg(String service){
+//        List<MessageEmbed> embedList = new ArrayList<>();
+        EmbedBuilder builder = new EmbedBuilder();
+        try {
+            JenkinsTestReport report = getLastTestCaseDetail(service);
+//            builder.setAuthor("MSDOBot Jenkins");
+            builder.setTitle("[Jenkins Test Report] " + service);
+            builder.setDescription("Duration: " + report.getTotalDuration() + "\n" +
+                                   "PassCount: " + report.getPassedCount() + "\n" +
+                                   "FailedCount: " + report.getFailedCount() + "\n" +
+                                   "SkipCount: " + report.getSkipCount() + "\n" +
+                                   "Detail: " + report.getReportDetailUrl());
+            for(JenkinsTestSuite suite: report.getTestSuites()){
+                String suiteName = suite.getSuiteName();
+                if(builder.getFields().size() >= 25){
+                    builder.setFooter("too many test case, check url for more complete information.");
+                    break;
+                }
+                for(JenkinsTestCase testCase: suite.getTestCases()){
+                    if(builder.getFields().size() >= 25){
+                        // set footer and return current builder result
+                        builder.setFooter("too many test case, check url for more complete information.");
+                        break;
+                    }
+                    builder.addField("[" + suiteName + "] " + testCase.getName(),
+                                     "duration: " + testCase.getDuration() + "\n" +
+                                           "error details: " + testCase.getErrorDetails() + "\n" +
+                                           "error stack trace: " + testCase.getErrorStackTrace() + "\n" +
+                                           "status: " + testCase.getStatus(),
+                                     false);
+                }
+            }
+        } catch (RequestFailException e) {
+            System.out.println("[DEBUG][JenkinsTestReportMsg] something goes wrong when requesting url.");
+            e.printStackTrace();
+        }
+        return Collections.singletonList(builder.build());
     }
 }

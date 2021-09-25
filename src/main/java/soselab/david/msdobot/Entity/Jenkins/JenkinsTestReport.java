@@ -1,8 +1,11 @@
 package soselab.david.msdobot.Entity.Jenkins;
 
 import com.google.gson.Gson;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class JenkinsTestReport {
 
@@ -99,5 +102,10 @@ public class JenkinsTestReport {
                 "Passed count = " + passedCount + "\n" +
                 "Skipped count = " + skipCount + "\n" +
                 "Check this url for report details: " + reportDetailUrl;
+    }
+
+    public List<MessageEmbed> getAsDiscordEmbedMessage(){
+        EmbedBuilder builder = new EmbedBuilder();
+        return null;
     }
 }

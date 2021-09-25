@@ -30,4 +30,10 @@ public class LongMessageController {
         System.out.println("[DEBUG][LongMessage Controller] GET method: request message triggered.");
         return ResponseEntity.ok(longMessageService.getMessage(id).getMessage());
     }
+
+    @GetMapping(value = "/")
+    public ResponseEntity<String> serverTest(){
+        System.out.println("[DEBUG][LongMessage Controller] GET method: testing method");
+        return ResponseEntity.ok("Greeting from Long Message Service :)");
+    }
 }

@@ -20,8 +20,8 @@ public class LongMessageService {
 
     public LongMessageService(LongMessageRepository repo, Environment env){
         repository = repo;
-        this.SERVER_HOST = env.getProperty("server.port");
-        this.SERVER_PORT = env.getProperty("server.address");
+        this.SERVER_PORT = env.getProperty("server.port");
+        this.SERVER_HOST = env.getProperty("server.address");
     }
 
     /**

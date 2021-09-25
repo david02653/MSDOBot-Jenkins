@@ -1,7 +1,10 @@
 package soselab.david.msdobot.Controller.DiscordEvent;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.ChannelType;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +21,7 @@ import soselab.david.msdobot.Service.RasaService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -68,9 +72,15 @@ public class DiscordMessageEvent extends ListenerAdapter {
      */
     @Override
     public void onMessageReceived(MessageReceivedEvent event){
+//        System.out.println("print author");
+//        System.out.println(event.getAuthor());
+//        event.getAuthor().openPrivateChannel();
 
         if(event.isFromType(ChannelType.PRIVATE)){
-            System.out.printf("[private message] %s: %s\n", event.getAuthor().getName(), event.getMessage().getContentDisplay());
+            if(!event.getAuthor().isBot()) {
+                System.out.printf("[private message] %s: %s\n", event.getAuthor().getName(), event.getMessage().getContentDisplay());
+                event.getChannel().sendMessage("ok ok").queue();
+            }
         }else{
             // [server name][server id][channel name] username: message-content
             System.out.printf("[%s][%s][%s] %s: %s\n", event.getGuild().getName(), event.getTextChannel().getName(), event.getGuild().getId(), Objects.requireNonNull(event.getMember()).getEffectiveName(), event.getMessage().getContentDisplay());
@@ -142,8 +152,8 @@ public class DiscordMessageEvent extends ListenerAdapter {
      * @param channelName which channel received message
      * @param msg incoming message
      */
-    private String normalMessageHandle(String channelName, String msg) throws JsonProcessingException, RequestFailException {
-        String result = "";
+    private MessageEmbed normalMessageHandle(String channelName, String msg) throws JsonProcessingException, RequestFailException {
+        MessageEmbed result;
         /* check additional question */
         /* if nothing found, send message to rasa */
         Question AQASearchResult;
@@ -155,7 +165,8 @@ public class DiscordMessageEvent extends ListenerAdapter {
         }
         if(AQASearchResult == null){
             // no result found from additional question, check rasa
-            result = rasaMessageHandle(msg);
+//            result = rasaMessageHandle(msg);
+            result = rasaAnalyze(msg);
         }else{
             // found matched question, return answer from additional question
             System.out.println("[DEBUG][normalMessageHandle][" + msg + "]: matched additional question found, try to reply with additional question list.");
@@ -179,6 +190,11 @@ public class DiscordMessageEvent extends ListenerAdapter {
         // send message back to frontend
         String correspondMsg = intentHandler.checkIntent(detectedIntent);
         return correspondMsg;
+    }
+    private MessageEmbed rasaAnalyze(String input) throws RequestFailException {
+        IntentSet detectedIntent = rasa.analyzeIntent(input);
+        List<MessageEmbed> resp = intentHandler.checkJenkinsIntent(detectedIntent);
+        return resp.get(0);
     }
 
 //    /**
@@ -235,9 +251,10 @@ public class DiscordMessageEvent extends ListenerAdapter {
      * @param inputMsg user input
      * @return answer found from Question instance
      */
-    private String handleAdditionalQARequest(Question target, String inputMsg){
+    private MessageEmbed handleAdditionalQARequest(Question target, String inputMsg){
         String resource = target.getResource().toLowerCase();
         String result = "";
+        EmbedBuilder builder = new EmbedBuilder();
         switch (resource){
             case "rest":
                 result = AdditionalQAService.restRequest(target.getSource(), target.getMethod());
@@ -246,7 +263,8 @@ public class DiscordMessageEvent extends ListenerAdapter {
                 result = target.getAnswer();
                 break;
         }
-        return result;
+        builder.setDescription(result);
+        return builder.build();
     }
 
     /**
