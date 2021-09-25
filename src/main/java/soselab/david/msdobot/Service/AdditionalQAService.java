@@ -29,7 +29,6 @@ public class AdditionalQAService {
 //    private static AdditionalQuizList quizList;
 //    private static ArrayList<AdditionalQuizList> lists = null;
     private final String additionalSettingPath;
-//    private final String longMsgHandleApi;
     private static List<ChannelAdditionalQuizList> lists;
 
     /**
@@ -39,7 +38,6 @@ public class AdditionalQAService {
     @Autowired
     public AdditionalQAService(Environment env){
         additionalSettingPath = env.getProperty("additional.setting.path");
-//        longMsgHandleApi = env.getProperty("long.message.handle.url");
         if(loadFile())
             System.out.println("[AdditionalQA][init] setting file load successfully.");
         else

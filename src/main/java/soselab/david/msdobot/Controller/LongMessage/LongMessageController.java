@@ -31,6 +31,11 @@ public class LongMessageController {
         return ResponseEntity.ok(longMessageService.getMessage(id).getMessage());
     }
 
+    /**
+     * testing GET method for testing purpose
+     * test if long message service is up
+     * @return welcome message
+     */
     @GetMapping(value = "/")
     public ResponseEntity<String> serverTest(){
         System.out.println("[DEBUG][LongMessage Controller] GET method: testing method");

@@ -72,14 +72,11 @@ public class DiscordMessageEvent extends ListenerAdapter {
      */
     @Override
     public void onMessageReceived(MessageReceivedEvent event){
-//        System.out.println("print author");
-//        System.out.println(event.getAuthor());
-//        event.getAuthor().openPrivateChannel();
 
         if(event.isFromType(ChannelType.PRIVATE)){
             if(!event.getAuthor().isBot()) {
                 System.out.printf("[private message] %s: %s\n", event.getAuthor().getName(), event.getMessage().getContentDisplay());
-                event.getChannel().sendMessage("ok ok").queue();
+                event.getChannel().sendMessage("Sorry, personal message is not available yet.").queue();
             }
         }else{
             // [server name][server id][channel name] username: message-content
@@ -165,7 +162,6 @@ public class DiscordMessageEvent extends ListenerAdapter {
         }
         if(AQASearchResult == null){
             // no result found from additional question, check rasa
-//            result = rasaMessageHandle(msg);
             result = rasaAnalyze(msg);
         }else{
             // found matched question, return answer from additional question
@@ -184,65 +180,11 @@ public class DiscordMessageEvent extends ListenerAdapter {
      * @param input user input
      * @return handle result
      */
-    private String rasaMessageHandle(String input) throws JsonProcessingException, RequestFailException {
-        IntentSet detectedIntent = rasa.analyzeIntent(input);
-        // send intent to intentHandler to check next move
-        // send message back to frontend
-        String correspondMsg = intentHandler.checkIntent(detectedIntent);
-        return correspondMsg;
-    }
     private MessageEmbed rasaAnalyze(String input) throws RequestFailException {
         IntentSet detectedIntent = rasa.analyzeIntent(input);
         List<MessageEmbed> resp = intentHandler.checkJenkinsIntent(detectedIntent);
         return resp.get(0);
     }
-
-//    /**
-//     * handle requests for additional question
-//     *
-//     *  21/08/11 update
-//     *  change to new workflow, SUSPEND this method
-//     *
-//     * @param event incoming onMessage event
-//     * @param input raw message of user input
-//     */
-//    private void handleAdditionalQARequest(@NotNull MessageReceivedEvent event, String input) throws Exception {
-//        String msg = parse(input);
-//        String currentChannelName = event.getTextChannel().getName().toLowerCase();
-//        TextChannel currentChannel = event.getTextChannel();
-//        if(additionQAList.get(currentChannelName) != null){
-//            String result = "";
-//            /* do stuff if current channel have questions in list */
-//            Question question = additionQAList.get(currentChannelName).get(msg.toLowerCase());
-//            if(question != null){
-//                String quizResource = question.getResource().toLowerCase();
-//                switch (quizResource){
-//                    case "rest":
-//                        /* handle addition question with resource from rest */
-//                        result = AdditionalQAService.restRequest(question.getSource(), question.getMethod());
-//                        break;
-//                    case "rasa":
-//                        /* handle addition question with resource from rasa*/
-//                        result = intentHandler.checkIntent(rasa.analyzeIntent(msg.toLowerCase()));
-//                        break;
-//                    default:
-//                        /* extract answer from setting file */
-//                        result = question.getAnswer();
-//                        break;
-//                }
-//                if(result != null)
-//                    jdaMsgHandler.sendMessage(currentChannel, result);
-//                else
-//                    System.out.println("[DEBUG][addition_QA] null result !");
-//            }else {
-////                event.getTextChannel().sendMessage("[Warning] No Additional question found or question list is not available.").queue();
-//                jdaMsgHandler.sendMessage(event.getTextChannel(), "[Warning] No Additional question found or question list is not available.");
-//            }
-//        }else {
-////            event.getTextChannel().sendMessage("[DEBUG] something goes wrong with setting file.").queue();
-//            jdaMsgHandler.sendMessage(event.getTextChannel(), "[DEBUG] something goes wrong with setting file.");
-//        }
-//    }
 
     /**
      * check answer from given Question instance
@@ -265,23 +207,5 @@ public class DiscordMessageEvent extends ListenerAdapter {
         }
         builder.setDescription(result);
         return builder.build();
-    }
-
-    /**
-     * remove white space from beginning and convert to lower case
-     * @param input input string
-     * @return result
-     */
-    private static String parse(String input){
-        String raw = input.substring(1); // remove command head
-//        String[] token = raw.split(" ");
-//        StringBuilder builder = new StringBuilder();
-//        Iterator<String> stringIterator = Arrays.stream(token).iterator();
-//        while(stringIterator.hasNext()){
-//            builder.append(stringIterator.next());
-//            if(stringIterator.hasNext())
-//                builder.append(" ");
-//        }
-        return raw.trim().toLowerCase();
     }
 }

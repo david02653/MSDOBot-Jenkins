@@ -1,6 +1,6 @@
 package soselab.david.msdobot.RabbitMQ.Consumer;
 
-import org.json.JSONObject;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import soselab.david.msdobot.Service.JDAConnect;
 
@@ -13,9 +13,11 @@ import java.nio.charset.StandardCharsets;
 public class RabbitMessageHandler {
 
     private final JDAConnect jdaService;
+    private final String rabbitmqChannel;
 
-    public RabbitMessageHandler(JDAConnect jdaConnect){
+    public RabbitMessageHandler(JDAConnect jdaConnect, Environment env){
         this.jdaService = jdaConnect;
+        this.rabbitmqChannel = env.getProperty("discord.channel.rabbitmq");
     }
 
     public void handleMessage(String msg){
@@ -37,30 +39,6 @@ public class RabbitMessageHandler {
 
         // <-- maybe add some filter here
         // send message to discord
-        jdaService.send("test_channel", output);
-    }
-
-    public void handleEurekaMessage(byte[] message){
-        String msg = new String(message);
-        JSONObject obj  = new JSONObject(msg);
-//        System.out.println(obj.toString());
-        System.out.println("[DEBUG][raw][handleEurekaMsg]" + obj);
-
-//        System.out.println(obj.get("status"));
-        String status = (String) obj.get("status");
-        String result = "";
-        switch(status){
-            case "Failed":
-                result = "[" + status + "] Service : " + obj.get("appName") + " is dead. Please check it.";
-                break;
-            case "Server Start":
-                result = "[" + status + "] Eureka Server just start working !";
-                break;
-            case "Server Registry Start":
-                result = "[" + status + "] Eureka Registry Server just start working !";
-                break;
-        }
-
-        jdaService.send("test_channel", result);
+        jdaService.send(rabbitmqChannel, output);
     }
 }

@@ -2,13 +2,13 @@ package soselab.david.msdobot.Controller.DiscordEvent;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Category;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageChannel;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.events.ReadyEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
+import net.dv8tion.jda.internal.entities.CategoryImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,6 @@ import soselab.david.msdobot.Service.AdditionalQAService;
 import java.awt.*;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Listener to JDA Ready event
@@ -27,10 +26,14 @@ public class ReadyListener implements EventListener {
 
     private final AdditionalQAService aqaService;
     private final String serverId;
+    private final String managerChannelName;
+    private final String rabbitmqChannelName;
 
     public ReadyListener(AdditionalQAService additionalQAService, Environment env){
         this.aqaService = additionalQAService;
         this.serverId = env.getProperty("discord.server.id");
+        this.managerChannelName = env.getProperty("discord.channel.system");
+        this.rabbitmqChannelName = env.getProperty("discord.channel.rabbitmq");
     }
 
     /**
@@ -41,7 +44,7 @@ public class ReadyListener implements EventListener {
     public void onEvent(@NotNull GenericEvent event) {
         if(event instanceof ReadyEvent){
             System.out.println("> JDA API ready");
-            checkManagerChannel(event);
+            checkBotChannel(event);
             fireOnlineMsg(event);
 
             if(aqaService.loadFile()){
@@ -53,12 +56,25 @@ public class ReadyListener implements EventListener {
         }
     }
 
-    private void checkManagerChannel(GenericEvent event){
-        List<TextChannel> botOffice = event.getJDA().getTextChannelsByName("bot-office", true);
+    /**
+     * check if specific channel exist
+     * botOffice is for system message
+     * rabbitMsg is for message from rabbitmq
+     * create channel if no correspond channel found
+     * @param event ready event
+     */
+    private void checkBotChannel(GenericEvent event){
+        List<TextChannel> botOffice = event.getJDA().getTextChannelsByName(managerChannelName, true);
         if(botOffice.size() <= 0){
             // create channel to check bot status
-            event.getJDA().getGuildById(serverId).createTextChannel("bot-office").queue(channel -> {
-                System.out.println(channel.getId());
+            event.getJDA().getGuildById(serverId).createTextChannel(managerChannelName).queue(channel -> {
+                System.out.println("[DEBUG][system channel] id: " + channel.getId());
+            });
+        }
+        List<TextChannel> rabbitMsg = event.getJDA().getTextChannelsByName(rabbitmqChannelName, true);
+        if(rabbitMsg.size() <= 0){
+            event.getJDA().getGuildById(serverId).createTextChannel(rabbitmqChannelName).queue(channel -> {
+                System.out.println("[DEBUG][rabbitmq channel] id: " + channel.getId());
             });
         }
     }
@@ -68,13 +84,8 @@ public class ReadyListener implements EventListener {
      */
     public void fireOnlineMsg(GenericEvent event){
         JDA currentJDA = event.getJDA();
-//        TextChannel channel = event.getJDA().getTextChannelsByName();
-        Guild manager = event.getJDA().getGuildById(serverId);
-        System.out.println(manager);
-        TextChannel target = currentJDA.getTextChannelsByName("bot-office", true).get(0);
-//        System.out.println(currentJDA.getTextChannelsByName("text2", true).size());
-//        System.out.println(target);
-//        TextChannel target = currentJDA.getGuildById("737233839709225001").getTextChannelById("777776098552447027");
+        TextChannel target = currentJDA.getGuildById(serverId).getTextChannelsByName(managerChannelName, true).get(0);
+//        TextChannel target = currentJDA.getTextChannelsByName("bot-office", true).get(0);
         System.out.println("[JDA][ReadyListener] send msg to discord !");
         if(target != null) {
 //            target.sendMessage("Bot service has launched !").queue();

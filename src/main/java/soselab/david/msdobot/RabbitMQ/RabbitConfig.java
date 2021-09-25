@@ -12,8 +12,6 @@ import org.springframework.core.env.Environment;
 import soselab.david.msdobot.RabbitMQ.Consumer.RabbitMessageHandler;
 import soselab.david.msdobot.Service.JDAConnect;
 
-import java.util.Arrays;
-
 /**
  * this class controls connection with rabbitMQ server
  *
@@ -37,18 +35,8 @@ public class RabbitConfig {
         this.rabbitMessageHandler = rabbitMessageHandler;
     }
 
-    public static final String EXCHANGE_NAME = "myExchange";
-    public static final String QUEUE_NAME = "myQueue";
-    public static final String TEST_EXCHANGE = "topic_logs";
-    public static final String TEST_QUEUE = "testQ";
     public static final String JENKINS_EXCHANGE = "jenkins";
     public static final String JENKINS_QUEUE = "jChannel";
-    public static final String EUREKA_EXCHANGE = "eurekaserver";
-    public static final String EUREKA_QUEUE = "eureka";
-
-    public static final String MISCELLANEOUS = "MISCELLANEOUS";
-    public static final String MASTER_QUEUE = "master";
-
 
 
     @Bean
@@ -58,35 +46,10 @@ public class RabbitConfig {
 
     // bind: myExchange - <"dog.#"> --> (myQueue)
     //         exchange   routingKey    queue(channel)
-    @Bean
-    Queue createQueue(){
-        return new Queue(QUEUE_NAME, true);
-    }
-    @Bean
-    TopicExchange exchange(){
-        return new TopicExchange(EXCHANGE_NAME);
-    }
 //    @Bean
 //    Binding binding(Queue q, TopicExchange topicExchange){
 //        return BindingBuilder.bind(q).to(topicExchange).with("dog.#");
 //    }
-    @Bean
-    Binding binding(){
-        return BindingBuilder.bind(createQueue()).to(exchange()).with("dog.#");
-    }
-
-    @Bean
-    Queue createQueueA(){
-        return new Queue(TEST_QUEUE, true);
-    }
-    @Bean
-    TopicExchange exchangeA(){
-        return new TopicExchange(TEST_EXCHANGE);
-    }
-    @Bean
-    Binding bindingA(){
-        return BindingBuilder.bind(createQueueA()).to(exchangeA()).with("rat.#");
-    }
     
     @Bean
     Queue createJenkinsQueue(){
@@ -101,33 +64,6 @@ public class RabbitConfig {
         return BindingBuilder.bind(createJenkinsQueue()).to(exchangeJenkins()).with("jenkins.*");
     }
 
-    @Bean
-    Queue createEurekaQueue(){
-        return new Queue(EUREKA_QUEUE, true);
-    }
-    @Bean
-    TopicExchange exchangeEureka(){
-        return new TopicExchange(EUREKA_EXCHANGE);
-    }
-    @Bean
-    Binding bindEureka(){
-        return BindingBuilder.bind(createEurekaQueue()).to(exchangeEureka()).with("eureka.*");
-    }
-
-    @Bean
-    Queue createMiscellaneousQueue(){
-        return new Queue(MASTER_QUEUE, true);
-    }
-    @Bean
-    TopicExchange exchangeMiscellaneous(){
-        return new TopicExchange(MISCELLANEOUS);
-    }
-    @Bean
-    Binding bindMiscellaneous(){
-        return BindingBuilder.bind(createMiscellaneousQueue()).to(exchangeMiscellaneous()).with("#");
-    }
-
-
     /* consumer message function settings */
 
     /**
@@ -138,35 +74,16 @@ public class RabbitConfig {
      * @return instance of message listener adapter
      */
     @Bean
-    MessageListenerAdapter listenerAdapter(RabbitMessageHandler handler){
-        return new MessageListenerAdapter(handler, "handleMessage");
-    }
-    @Bean
     MessageListenerAdapter jenkinsListener(RabbitMessageHandler handler){
         return new MessageListenerAdapter(handler, "handleJenkinsMessage");
     }
-    @Bean
-    MessageListenerAdapter eurekaListener(RabbitMessageHandler handler){
-        return new MessageListenerAdapter(handler, "handleEurekaMessage");
-    }
 
+    /* consumer settings */
     /**
      * bind exchange, queue, message handler together
      * @param connectionFactory
      * @return consumer container
      */
-    /* consumer settings */
-    @Bean
-    SimpleMessageListenerContainer container(ConnectionFactory connectionFactory/*, MessageListenerAdapter adapter*/){
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        container.setQueueNames(QUEUE_NAME);
-//        container.setMessageListener(adapter);
-        container.setMessageListener(listenerAdapter(rabbitMessageHandler));
-
-        return container;
-    }
-
     @Bean
     SimpleMessageListenerContainer jenkinsContainer(ConnectionFactory connectionFactory){
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
@@ -174,37 +91,6 @@ public class RabbitConfig {
         container.setQueueNames(JENKINS_QUEUE);
         container.setMessageListener(jenkinsListener(rabbitMessageHandler));
 
-        return container;
-    }
-
-    @Bean
-    SimpleMessageListenerContainer eurekaContainer(ConnectionFactory connectionFactory){
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        container.setQueueNames(EUREKA_QUEUE);
-        container.setMessageListener(eurekaListener(rabbitMessageHandler));
-        return container;
-    }
-
-    @Bean
-    SimpleMessageListenerContainer miscellaneousContainer(ConnectionFactory connectionFactory){
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        container.setQueueNames(MASTER_QUEUE);
-        container.setMessageListener((MessageListener) message -> {
-            System.out.println(message.getMessageProperties());
-            System.out.println(message.getMessageProperties().getContentType());
-            System.out.println(message.getMessageProperties().getTimestamp());
-            System.out.println(Arrays.toString(message.getBody()));
-            String msg = new String(message.getBody());
-            System.out.println(msg);
-            try {
-                jdaService.getJda().awaitReady();
-                jdaService.send("text2", " [x] from '" + message.getMessageProperties().getReceivedRoutingKey() + "' : " + msg);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
         return container;
     }
 }
