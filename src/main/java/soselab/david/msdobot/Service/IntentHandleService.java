@@ -116,6 +116,8 @@ public class IntentHandleService {
                 return getJenkinsTestReportMsg(service);
             case "ask_last_build_report":
                 return getJenkinsJobOverview(service);
+            case "ask_view_test_report_overview":
+                return jenkinsTestReportOverviewMsg(service);
             // get job git update
         }
         return noMatchedIntent(intent);
@@ -804,5 +806,69 @@ public class IntentHandleService {
             e.printStackTrace();
         }
         return Collections.singletonList(builder.build());
+    }
+
+    /**
+     * get all test report by view name
+     * @param viewName target view name
+     * @return all jenkins report summary message
+     */
+    public List<MessageEmbed> jenkinsTestReportOverviewMsg(String viewName){
+        String query = "/api/json?depth=3&tree=views[name,url,jobs[name,lastBuild[id,duration,result,actions[*]{3,}]]]";
+        String url = jenkinsEndpoint + query;
+        Gson gson = new Gson();
+        EmbedBuilder builder = new EmbedBuilder();
+        /* make sure view name 'all' always works */
+        if(viewName.equals("ALL") || viewName.equals("All"))
+            viewName = "all";
+        builder.setTitle("[General view testReport] " + viewName);
+        try{
+            ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
+            JsonObject json = gson.fromJson(resp.getBody(), JsonObject.class);
+            JsonArray views = json.get("views").getAsJsonArray();
+            int totalCountSum =0, skipCountSum = 0, failCountSum = 0, passCountSum = 0;
+            for(JsonElement ele: views){
+                JsonObject view = ele.getAsJsonObject();
+                if(!view.get("name").getAsString().equals(viewName)) continue; // check view name
+                JsonArray jobList = view.get("jobs").getAsJsonArray(); // job list of target view
+                for(JsonElement job: jobList){
+                    JsonElement testObj = job.getAsJsonObject().get("lastBuild").getAsJsonObject().get("actions").getAsJsonArray().get(0);
+                    if(testObj == null) continue; // in case no test report found
+                    JsonObject testReport = testObj.getAsJsonObject();
+                    int total = testReport.get("totalCount").getAsInt();
+                    int skip = testReport.get("skipCount").getAsInt();
+                    int fail = testReport.get("failCount").getAsInt();
+                    int pass = total - skip - fail;
+                    totalCountSum += total;
+                    skipCountSum += skip;
+                    failCountSum += fail;
+                    if(builder.getFields().size() < 25){
+                        String jobName = job.getAsJsonObject().get("name").getAsString();
+                        builder.addField("[Job] " + jobName,
+                                         "[TotalCount]: " + total + "\n" +
+                                               "[PassCount]: " + pass + "\n" +
+                                               "[FailCount]: " + fail + "\n" +
+                                               "[SkipCount]: " + skip,
+                                         false);
+                    }else{
+                        builder.setFooter("Too many jobs, check each job for details.");
+                    }
+                }
+            }
+            passCountSum = totalCountSum - skipCountSum - failCountSum;
+            builder.setDescription("**TotalCount:** " + totalCountSum + "\n" +
+                                   "**PassCount:** " + passCountSum + "\n" +
+                                   "**FailCount:** " + failCountSum + "\n" +
+                                   "**SkipCount:** " + skipCountSum);
+        } catch (RequestFailException e){
+            e.printStackTrace();
+            System.out.println("[DEBUG][JenkinsTestReportOverview] something goes wrong when requesting url.");
+        }
+        return Collections.singletonList(builder.build());
+    }
+
+    private float getTestCasePassRate(int totalCount, int skipCount, int failCount){
+        int passCount = totalCount - skipCount - failCount;
+        return (float) passCount / totalCount;
     }
 }

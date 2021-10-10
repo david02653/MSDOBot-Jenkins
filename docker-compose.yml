@@ -1,0 +1,69 @@
+version: '3.3'
+
+services:
+  mongodb:
+    image: mongo:latest
+    restart: always
+    container_name: msdobot-msg-storage
+    environment:
+      MONGO_INITDB_DATABASE: msdobot
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./mongo/mongo-volumn:/data/db
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: always
+    container_name: msdobot-rabbit
+    ports:
+      - "10011:5672"
+      - "10012:15672"
+  rasa:
+    image: rasa/rasa:2.8.5-full
+    restart: always
+    networks: ['rasa-network']
+    user: root
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./rasa:/app/
+    depends_on:
+      - action_server
+    command:
+      - run
+      - --model
+      - /app/models/jenkins.tar.gz
+      - --endpoints
+      - /app/endpoints.yml
+      - -vv
+      - --enable-api
+  action_server:
+    image: msdobot/jenkins-action:v0.1
+    restart: always
+    networks: ['rasa-network']
+    ports:
+      - "5055:5055"
+    volumes:
+      - ./rasa/actions:/bot/actions
+    command:
+      - start
+      - --actions
+      - actions
+      - -vv
+#  msdobot-jenkins:
+#    image: msdobot-jenkins:latest
+##    restart: always
+#    container_name: msdobot-jenkins
+#    ports:
+#      - 8080:8080
+#    depends_on:
+#      - mongodb
+#      - rabbitmq
+#      - rasa
+#    links:
+#      - mongodb
+#      - rabbitmq
+#      - rasa
+
+networks: {rasa-network: {}}

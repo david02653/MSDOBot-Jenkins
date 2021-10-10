@@ -1,0 +1,74 @@
+version: '2.0'
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true
+intents:
+- greet
+- help
+- ask_job_view_list
+- ask_view_detail
+- ask_job_list
+- ask_job_test_report
+- ask_job_health_report
+- ask_build_result
+- ask_last_build_report
+- ask_job_git_update
+- ask_system_latest_build
+- ask_system_failed_build
+- ask_system_all_build
+- ask_jenkins_log
+- ask_jenkins_severe_log
+- ask_jenkins_warning_log
+- ask_plugin_info
+- ask_env_info
+- ask_credential_info
+- ask_view_test_report_overview
+- fake_job_name
+slots:
+  lastJob:
+    type: text
+    influence_conversation: false
+    auto_fill: false
+    initial_value: cinema
+entities:
+  - job_name
+responses:
+  utter_greet:
+  - text: |
+      Hello! How can I help you?
+  - text: |
+      Hi!
+  # utter_ask_email:
+  # - text: |
+  #     What is your email address?
+  # utter_subscribed:
+  # - text: |
+  #     Check your inbox at {email} in order to finish subscribing to the newsletter!
+  # - text: You're all set! Check your inbox at {email} to confirm your subscription.
+actions:
+#- '...'
+- action_greet
+- action_bot_help
+- action_job_view_list
+- action_job_view_detail
+- action_job_list
+- action_job_test_report
+- action_job_health_report
+- action_job_build_result
+- action_job_last_build_report
+- action_job_git_update
+- action_system_latest_build
+- action_system_failed_build
+- action_system_all_build
+- action_jenkins_log
+- action_jenkins_severe_log
+- action_jenkins_warning_log
+- action_plugin_info
+- action_env_info
+- action_credential_info
+- action_view_test_report_overview
+forms:
+  newsletter_form:
+    required_slots:
+      lastJob:
+      - type: from_text

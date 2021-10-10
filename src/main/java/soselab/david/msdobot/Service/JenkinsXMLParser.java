@@ -100,7 +100,7 @@ public class JenkinsXMLParser {
                 logEntry.setId(entryId);
                 logEntry.setPublishedTime(publishedTime);
                 logEntry.setContent(removeUselessInfoFromJenkinsLogEntryContent(content));
-                if(content.split("\n").length >= 3 || content.length() > 2000)
+                if(content.split("\n").length >= 3 || content.length() > 2000 || content.contains(".java:") || content.contains("Exception:"))
                     logEntry.setContentDetail(longMessageService.getUrl(longMessageService.addMessage(content)));
 //                    logEntry.setContentDetail(">>> TEMPORARY REMOVED <<<");
                 else

@@ -3,6 +3,7 @@ package soselab.david.msdobot.Entity.Rasa;
 public class IntentSet {
     public String intent;
     public String jobName;
+    public boolean lostName;
 
     public void setIntent(String intent) {
         this.intent = intent;
@@ -10,6 +11,10 @@ public class IntentSet {
 
     public void setJobName(String jobName) {
         this.jobName = jobName;
+    }
+
+    public void setLostName(boolean lostName) {
+        this.lostName = lostName;
     }
 
     public String getIntent() {
@@ -20,11 +25,16 @@ public class IntentSet {
         return jobName;
     }
 
+    public boolean hasLostName() {
+        return lostName;
+    }
+
     @Override
     public String toString() {
         return "IntentSet{" +
                 "intent='" + intent + '\'' +
-                ", service='" + jobName + '\'' +
+                ", jobName='" + jobName + '\'' +
+                ", lostName='" + lostName + '\'' +
                 '}';
     }
 }

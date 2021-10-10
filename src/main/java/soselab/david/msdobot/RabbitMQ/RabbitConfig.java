@@ -30,7 +30,7 @@ public class RabbitConfig {
     private final JDAConnect jdaService;
     private final RabbitMessageHandler rabbitMessageHandler;
 
-    public RabbitConfig(JDAConnect jdaConnect, RabbitMessageHandler rabbitMessageHandler, Environment env){
+    public RabbitConfig(JDAConnect jdaConnect, RabbitMessageHandler rabbitMessageHandler){
         this.jdaService = jdaConnect;
         this.rabbitMessageHandler = rabbitMessageHandler;
     }

@@ -72,9 +72,11 @@ public class JDAConnect {
      */
     public void configure(JDABuilder builder){
         // disable member activities (streaming / games / spotify)
-        builder.disableCache(CacheFlag.ACTIVITY);
+//        builder.disableCache(CacheFlag.ACTIVITY);
         // disable member chunking on startup
-        builder.setChunkingFilter(ChunkingFilter.NONE);
+//        builder.setChunkingFilter(ChunkingFilter.NONE);
+
+        builder.enableIntents(GatewayIntent.GUILD_MEMBERS).setMemberCachePolicy(MemberCachePolicy.ALL);
     }
 
     /**

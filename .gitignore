@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### long server mongo volume ###
+/mongo/mongo-volumn/
+
+### misc ###
+application.properties

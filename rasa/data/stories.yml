@@ -1,0 +1,101 @@
+stories:
+#  - story: greetings
+#    steps:
+#    - intent: greet
+#    - action: action_greet
+
+#  - story: bot help
+#    steps:
+#    - intent: help
+#    - action: action_bot_help
+
+#  - story: get all job view
+#    steps:
+#    - intent: ask_job_view_list
+#    - action: action_job_view_list
+
+#  - story: get target job view detail
+#    steps:
+#    - intent: ask_view_detail
+#    - action: action_job_view_detail
+#    - action: action_restart
+
+#  - story: get list of job
+#    steps:
+#    - intent: ask_job_list
+#    - action: action_job_list
+
+#  - story: get test report about job
+#    steps:
+#    - intent: ask_job_test_report
+#    - action: action_job_test_report
+#    - action: action_restart
+
+#  - story: get health report about job
+#    steps:
+#    - intent: ask_job_health_report
+#    - action: action_job_health_report
+#    - action: action_restart
+
+#  - story: get build result about job
+#    steps:
+#    - intent: ask_build_result
+#    - action: action_job_build_result
+#    - action: action_restart
+
+#  - story: get build overview about job
+#    steps:
+#    - intent: ask_last_build_report
+#    - action: action_job_last_build_report
+#    - action: action_restart
+
+#  - story: get updated git info
+#    steps:
+#    - intent: ask_job_git_update
+#    - action: action_job_git_update
+#    - action: action_restart
+
+#  - story: get latest build information (atom)
+#    steps:
+#    - intent: ask_system_latest_build
+#    - action: action_system_latest_build
+
+#  - story: get failed build information (atom)
+#    steps:
+#    - intent: ask_system_failed_build
+#    - action: action_system_failed_build
+
+#  - story: get all build information (atom)
+#    steps:
+#    - intent: ask_system_all_build
+#    - action: action_system_all_build
+
+#  - story: get jenkins log
+#    steps:
+#    - intent: ask_jenkins_log
+#    - action: action_jenkins_log
+
+#  - story: get jenkins severe log
+#    steps:
+#    - intent: ask_jenkins_severe_log
+#    - action: action_jenkins_severe_log
+
+#  - story: get jenkins warning log
+#    steps:
+#    - intent: ask_jenkins_warning_log
+#    - action: action_jenkins_warning_log
+
+#  - story: get plugin information
+#    steps:
+#    - intent: ask_plugin_info
+#    - action: action_plugin_info
+
+#  - story: get jenkins env info
+#    steps:
+#    - intent: ask_env_info
+#    - action: action_env_info
+
+#  - story: get credential info
+#    steps:
+#    - intent: ask_credential_info
+#    - action: action_credential_info

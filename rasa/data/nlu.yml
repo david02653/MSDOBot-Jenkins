@@ -1,0 +1,212 @@
+nlu:
+- intent: greet
+  examples: |
+    - Hi
+    - Hey!
+    - Hallo
+    - Good day
+    - Good morning
+    - hello
+    - yo
+
+- intent: help
+  examples: |
+    - help
+    - bot help
+    - jenkins bot help
+    - jenkins help
+    - how to use
+    - how to use this bot
+    - how do this work
+    - tutorial
+    - cookbook
+    - manual
+    - i need some help
+    - tell me how to use this bot
+    - tell me how to use
+    - give me a hand
+
+- intent: ask_job_view_list
+  examples: |
+    - show me current jenkins job views
+    - list current jenkins job views
+    - which kind of job view do you have
+    - list job view
+    - show job view list
+
+- intent: ask_view_detail
+  examples: |
+    - show me view detail about [Cinema](job_name)
+    - detail about view [All](job_name)
+    - i need more information about view [All](job_name)
+
+- intent: ask_job_list
+  examples: |
+    - show me current job list on jenkins
+    - list all current jenkins jobs
+    - jenkins job list
+    - job list
+    - give me the list of all jobs
+    - list all jobs
+    - show all jobs
+    - list jobs
+
+- intent: ask_job_test_report
+  examples: |
+    - show me test report about [Notification](job_name)
+    - give me test report about [Payment](job_name)
+    - test report of [Ordering](job_name)
+    - i need test report about [Cinema](job_name)
+
+- intent: ask_job_health_report
+  examples: |
+    - show me health report about [Ordering](job_name)
+    - give me the health report about [Payment](job_name)
+    - health report about [Nofitication](job_name)
+    - health report of [Notification](job_name)
+    - i need health report about [Cinema](job_name)
+
+- intent: ask_build_result
+  examples: |
+    - show me build result about [Payment](job_name)
+    - give me the build result of [Notification](job_name)
+    - build result of [Payment](job_name)
+    - build result about [Cinema](job_name)
+
+- intent: ask_last_build_report
+  examples: |
+    - show me last build report about [Notification](job_name)
+    - give me last build report about [Notification](job_name)
+    - last build report of [Cinema](job_name)
+    - send lastest build report of [Payment](job_name)
+
+- intent: ask_job_git_update
+  examples: |
+    - show me git update info about [Cinema](job_name)
+    - show me what's the difference on git after latest build of [Notification](job_name)
+    - list file changes of [Payment](job_name) on git
+    - git update of [Ordering](job_name)
+
+- intent: ask_system_latest_build
+  examples: |
+    - list latest system build info
+    - show latest system build
+    - information about latest system build
+
+- intent: ask_system_failed_build
+  examples: |
+    - list recent failed build
+    - list jenkins recent failed build
+    - show me recent failed build
+    - system failed build
+    - failed build
+    - jenkins failed build
+    - jenkins recent failed build
+
+- intent: ask_system_all_build
+  examples: |
+    - list all recent build
+    - recent jenkins build
+    - all jenkins build
+    - all recent jenkins build
+    - show all jenkins build
+
+- intent: ask_jenkins_log
+  examples: |
+    - show me current jenkins system log
+    - i need to check jenkins system log
+    - jenkins system log
+    - system log
+    - log
+
+- intent: ask_jenkins_severe_log
+  examples: |
+    - severe log
+    - jenkins severe log
+    - jenkins system severe log
+    - system severe log
+    - show me current severe log
+    - show me jenkins severe log
+
+- intent: ask_jenkins_warning_log
+  examples: |
+    - warning log
+    - system warning log
+    - jenkins warning log
+    - jenkins system warning log
+    - show me warning log
+    - show me system warning log
+    - show me jenkins warning log
+
+- intent: ask_plugin_info
+  examples: |
+    - show me current jenkins plugin info
+    - information about jenkins plugin
+    - current jenkins plugin
+    - jenkins plugin
+    - jenkins plugin info
+
+- intent: ask_env_info
+  examples: |
+    - show me current jenkins environment information
+    - current jenkins environment
+    - information about current jenkins environment
+    - jenkins env info
+    - give me some info about current jenkins environment
+    - env info
+    - env information
+    - environment information
+
+- intent: ask_credential_info
+  examples: |
+    - show me current jenkins credential information
+    - credential info
+    - information about jenins credential
+    - information about current jenkins credential
+    - jenkins credential info
+    - give me credential info
+    - give me credential info about jenkins
+    - current credential info
+    - credential information
+
+- intent: ask_view_test_report_overview
+  examples: |
+    - test report overview of view [Cinema](job_name)
+    - test report of view [Ordering](job_name)
+    - overview test report of [Payment](job_name)
+
+- intent: fake_job_name
+  examples: |
+    - try this [Cake](job_name)
+    - try this [marijuana](job_name)
+    - try this [grava](job_name)
+    - try this [apple](job_name)
+    - try this [basic](job_name)
+    - try this [cyberpunk](job_name)
+    - try this [daydream](job_name)
+    - try this [economic](job_name)
+    - try this [fedora](job_name)
+    - try this [gameboy](job_name)
+    - try this [hypervisor](job_name)
+    - try this [idol](job_name)
+    - try this [jackpot](job_name)
+    - try this [knock](job_name)
+    - try this [lobster](job_name)
+    - try this [modern](job_name)
+    - try this [notebook](job_name)
+    - try this [otomata](job_name)
+    - try this [popcorn](job_name)
+    - try this [question](job_name)
+    - try this [rockstar](job_name)
+    - try this [staycool](job_name)
+    - try this [tetris](job_name)
+    - try this [uber](job_name)
+    - try this [vertex](job_name)
+    - try this [wookpecker](job_name)
+    - try this [xanthone](job_name)
+    - try this [yeet](job_name)
+    - try this [zealous](job_name)
+
+- regex: job_name
+  examples: |
+    - ^[a-zA-Z][a-zA-Z0-9- ]*$

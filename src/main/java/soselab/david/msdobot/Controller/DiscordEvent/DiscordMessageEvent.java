@@ -3,7 +3,6 @@ package soselab.david.msdobot.Controller.DiscordEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.ChannelType;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -19,6 +18,7 @@ import soselab.david.msdobot.Service.IntentHandleService;
 import soselab.david.msdobot.Service.JDAMessageHandler;
 import soselab.david.msdobot.Service.RasaService;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -98,18 +98,18 @@ public class DiscordMessageEvent extends ListenerAdapter {
                         for(String msg: msgList){
                             // handle each message
                             System.out.println("[DEBUG][DiscordMessageEvent][multiple message handle]: " + msg);
-                            jdaMsgHandler.sendMessage(event.getTextChannel(), normalMessageHandle(event.getChannel().getName(), msg));
+                            jdaMsgHandler.sendMessage(event.getTextChannel(), normalMessageHandle(event.getChannel().getName(), msg, event));
                         }
                     }else{
                         // single message
-                        jdaMsgHandler.sendMessage(event.getTextChannel(), normalMessageHandle(event.getChannel().getName(), msgReceived));
+                        jdaMsgHandler.sendMessage(event.getTextChannel(), normalMessageHandle(event.getChannel().getName(), msgReceived, event));
                     }
                 }catch (JsonProcessingException je){
-                    jdaMsgHandler.sendMessage(event.getTextChannel(), "Something goes wrong in api request, might by some json parsing error, check api related service");
+                    jdaMsgHandler.sendMessage(event.getTextChannel(), "Something goes wrong in api request, might by some json parsing error, check api server");
                     System.out.println("[DEBUG][DiscordMessageEvent] maybe some json related error happened.");
                     je.printStackTrace();
                 }catch (RequestFailException re) {
-                    jdaMsgHandler.sendMessage(event.getTextChannel(), "Something goes wrong when firing api request");
+                    jdaMsgHandler.sendMessage(event.getTextChannel(), "Something goes wrong when firing api request, make sure job name is correct and api server is available.");
                     System.out.println("[DEBUG][DiscordMessageEvent] maybe some api request error happened.");
                     re.printStackTrace();
                 }
@@ -149,7 +149,7 @@ public class DiscordMessageEvent extends ListenerAdapter {
      * @param channelName which channel received message
      * @param msg incoming message
      */
-    private MessageEmbed normalMessageHandle(String channelName, String msg) throws JsonProcessingException, RequestFailException {
+    private MessageEmbed normalMessageHandle(String channelName, String msg, MessageReceivedEvent msgEvn) throws JsonProcessingException, RequestFailException {
         MessageEmbed result;
         /* check additional question */
         /* if nothing found, send message to rasa */
@@ -162,7 +162,7 @@ public class DiscordMessageEvent extends ListenerAdapter {
         }
         if(AQASearchResult == null){
             // no result found from additional question, check rasa
-            result = rasaAnalyze(msg);
+            result = rasaAnalyze(msg, msgEvn);
         }else{
             // found matched question, return answer from additional question
             System.out.println("[DEBUG][normalMessageHandle][" + msg + "]: matched additional question found, try to reply with additional question list.");
@@ -180,8 +180,12 @@ public class DiscordMessageEvent extends ListenerAdapter {
      * @param input user input
      * @return handle result
      */
-    private MessageEmbed rasaAnalyze(String input) throws RequestFailException {
+    private MessageEmbed rasaAnalyze(String input, MessageReceivedEvent msgEvn) throws RequestFailException {
         IntentSet detectedIntent = rasa.analyzeIntent(input);
+        if(detectedIntent.hasLostName()){
+            // job name extraction failed, use previous job name instead
+            jdaMsgHandler.sendMessage(msgEvn.getTextChannel(), new EmbedBuilder().setDescription("**[WARNING]** Job name extraction failed, use previous job name to query.").setColor(new Color(255, 255, 102)).build());
+        }
         List<MessageEmbed> resp = intentHandler.checkJenkinsIntent(detectedIntent);
         return resp.get(0);
     }
