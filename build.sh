@@ -4,6 +4,8 @@
 cd rasa
 sh ./buildActionServer.sh
 
+cd ..
+
 # build msdobot-jenkins bot server
 mvn clean test -Dmaven.test.failure.ignore=true
 mvn install -Dmaven.test.skip=true
