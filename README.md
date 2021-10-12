@@ -88,45 +88,59 @@ sh ./run.sh
 目前的機器人總共有提供下述的功能來幫助使用者來了解連接的`jenkins`的狀況
 
 `help`  取得使用說明
+
 ![](https://i.imgur.com/Sd1NvuH.png)
 
 `jenkins view list` 取得 view 列表
+
 ![](https://i.imgur.com/Mw8bwy8.png)
 
 `view detail about <ViewName>` 取得 View 細節
+
 ![](https://i.imgur.com/WZoTciH.png)
 
 `test report overview of <ViewName>` 取得 View 整體專案的測試報告整合
+
 ![](https://i.imgur.com/i0SJmEL.png)
 
 `all jbo list` 取得 job 列表
+
 ![](https://i.imgur.com/NV7oiNS.png)
 
 `health report about <JobName>` 取得 Job 建置狀況
+
 ![](https://i.imgur.com/cryGfYj.png)
 
 `build result about <JobName>` 取得 Job 建置結果
+
 ![](https://i.imgur.com/6pao8c0.png)
 
 `test report about <JobName>` 取得 Job 測試報告
+
 ![](https://i.imgur.com/yxkk3Wu.png)
 
 `last build report about <JobName>` 取得 Job 建置報告
+
 ![](https://i.imgur.com/NtdUg3J.png)
 
 `jenkins system latest build` 取得最新建置專案
+
 ![](https://i.imgur.com/X7lxvnK.png)
 
 `jenkins system failed build` 取得近期失敗專案
+
 ![](https://i.imgur.com/N23JXRH.png)
 
 `all jenkins build` 取得近期建置專案
+
 ![](https://i.imgur.com/wOSmZSp.png)
 
 `jenkins log` 取得系統紀錄
+
 ![](https://i.imgur.com/V1mpsxy.png)
 
 `jenkins plugin` 取得系統插件資訊
+
 ![](https://i.imgur.com/kzS8gvH.png)
 
 
@@ -151,6 +165,8 @@ rasa train --fixed-model-name jenkins
 如果不想進行安裝的話，這裡有提供連結可以直接體驗實際的操作
 
 ### 快速體驗
+
+https://discord.gg/ZecVax9sm9
 
 直接加入測試的server就可以跟機器人互動了
 
