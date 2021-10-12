@@ -27,7 +27,6 @@ public class JDAConnect {
     private JDA jda;
     private ReadyListener readyListener;
     private DiscordMessageEvent discordMessageEventListener;
-    private NickNameUpdateEvent nickNameUpdateEvent;
     private final String DISCORD_BOT_TOKEN;
 
     @Autowired
@@ -35,8 +34,6 @@ public class JDAConnect {
         this.readyListener = readyListener;
         this.discordMessageEventListener = discordMessageEvent;
         this.DISCORD_BOT_TOKEN = env.getProperty("discord.application.token");
-
-        this.nickNameUpdateEvent = nicknameUpdateEvt;
     }
 
     /**
@@ -70,7 +67,6 @@ public class JDAConnect {
         builder.addEventListeners(readyListener);
         // add customized MessageListener
         builder.addEventListeners(discordMessageEventListener);
-        builder.addEventListeners(nickNameUpdateEvent);
         jda = builder.build();
     }
 
