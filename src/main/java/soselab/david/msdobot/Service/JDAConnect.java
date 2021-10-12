@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import soselab.david.msdobot.Controller.DiscordEvent.DiscordMessageEvent;
-import soselab.david.msdobot.Controller.DiscordEvent.NickNameUpdateEvent;
 import soselab.david.msdobot.Controller.DiscordEvent.ReadyListener;
 
 import javax.annotation.PostConstruct;
@@ -30,7 +29,7 @@ public class JDAConnect {
     private final String DISCORD_BOT_TOKEN;
 
     @Autowired
-    public JDAConnect(ReadyListener readyListener, DiscordMessageEvent discordMessageEvent, NickNameUpdateEvent nicknameUpdateEvt, Environment env){
+    public JDAConnect(ReadyListener readyListener, DiscordMessageEvent discordMessageEvent, Environment env){
         this.readyListener = readyListener;
         this.discordMessageEventListener = discordMessageEvent;
         this.DISCORD_BOT_TOKEN = env.getProperty("discord.application.token");
