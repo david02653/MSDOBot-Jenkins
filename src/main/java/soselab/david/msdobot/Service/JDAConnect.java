@@ -3,12 +3,16 @@ package soselab.david.msdobot.Service;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateNicknameEvent;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
+import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import soselab.david.msdobot.Controller.DiscordEvent.DiscordMessageEvent;
+import soselab.david.msdobot.Controller.DiscordEvent.NickNameUpdateEvent;
 import soselab.david.msdobot.Controller.DiscordEvent.ReadyListener;
 
 import javax.annotation.PostConstruct;
@@ -23,13 +27,16 @@ public class JDAConnect {
     private JDA jda;
     private ReadyListener readyListener;
     private DiscordMessageEvent discordMessageEventListener;
+    private NickNameUpdateEvent nickNameUpdateEvent;
     private final String DISCORD_BOT_TOKEN;
 
     @Autowired
-    public JDAConnect(ReadyListener readyListener, DiscordMessageEvent discordMessageEvent, Environment env){
+    public JDAConnect(ReadyListener readyListener, DiscordMessageEvent discordMessageEvent, NickNameUpdateEvent nicknameUpdateEvt, Environment env){
         this.readyListener = readyListener;
         this.discordMessageEventListener = discordMessageEvent;
         this.DISCORD_BOT_TOKEN = env.getProperty("discord.application.token");
+
+        this.nickNameUpdateEvent = nicknameUpdateEvt;
     }
 
     /**
@@ -63,6 +70,7 @@ public class JDAConnect {
         builder.addEventListeners(readyListener);
         // add customized MessageListener
         builder.addEventListeners(discordMessageEventListener);
+        builder.addEventListeners(nickNameUpdateEvent);
         jda = builder.build();
     }
 

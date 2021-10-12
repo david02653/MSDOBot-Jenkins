@@ -1,5 +1,6 @@
 package soselab.david.msdobot.Controller.LongMessage;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ public class LongMessageController {
 
     private final LongMessageService longMessageService;
 
+    @Autowired
     public LongMessageController(LongMessageService longMessageService){
         this.longMessageService = longMessageService;
     }

@@ -39,10 +39,11 @@ import java.util.regex.Pattern;
 @Service
 public class IntentHandleService {
 
-    /* endpoint path from properties */
+    /* settings from properties */
     private final String jenkinsEndpoint;
     private final String jenkinsUser;
     private final String jenkinsToken;
+    private final int fieldSize;
 
     /* required spring managed service */
     private final LongMessageService longMessageService;
@@ -56,6 +57,7 @@ public class IntentHandleService {
         this.jenkinsUser = env.getProperty("env.setting.jenkins.user");
         this.jenkinsToken = env.getProperty("env.setting.jenkins.token");
         this.longMessageService = longMessageService;
+        this.fieldSize = Integer.parseInt(env.getProperty("discord.infoField.maximumSize"));
     }
 
     /**
@@ -130,8 +132,10 @@ public class IntentHandleService {
      */
     private List<MessageEmbed> noMatchedIntent(String intent){
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setDescription("No intent found matched with [" + intent + "].");
-        builder.setTitle("Oops");
+        builder.setColor(generateRandomLightColor());
+        builder.addField("OOPS", "No intent found matched with [" + intent + "]", false);
+//        builder.setDescription("No intent found matched with [" + intent + "].");
+//        builder.setTitle("Oops");
         return Collections.singletonList(builder.build());
     }
 
@@ -146,6 +150,7 @@ public class IntentHandleService {
      */
     public List<MessageEmbed> greeting(){
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setDescription("Hi ! How can i help you ?");
         return Collections.singletonList(builder.build());
     }
@@ -165,14 +170,15 @@ public class IntentHandleService {
                 "4. Get health report about single job.\n" +
                 "5. Get build result about single job.\n" +
                 "6. Get test report about single job.\n" +
-                "7. Get last build report about single job.\n" +
-                "8. Get info about recent build on Jenkins.\n" +
-                "9. Get info about failed build on Jenkins.\n" +
-                "10. Get info about latest build on Jenkins.\n" +
-                "11. Get Jenkins system log.\n" +
-                "12. Get Jenkins system log (severe).\n" +
-                "13. Get Jenkins system log (warning).\n" +
-                "14. Get info about current plugin on Jenkins.";
+                "7. Get test report overview about single view.\n" +
+                "8. Get last build report about single job.\n" +
+                "9. Get info about recent build on Jenkins.\n" +
+                "10. Get info about failed build on Jenkins.\n" +
+                "11. Get info about latest build on Jenkins.\n" +
+                "12. Get Jenkins system log.\n" +
+                "13. Get Jenkins system log (severe).\n" +
+                "14. Get Jenkins system log (warning).\n" +
+                "15. Get info about current plugin on Jenkins.";
         embedBuilder.setDescription(helpMsg);
         embedBuilder.setTimestamp(Instant.now());
         embedBuilder.setFooter("bot help");
@@ -381,10 +387,12 @@ public class IntentHandleService {
     public List<MessageEmbed> getJenkinsViewsMsg() throws RequestFailException {
         HashMap<String, JenkinsView> viewList = getAllJenkinsViews();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setTitle("Jenkins view list");
         for(Map.Entry<String, JenkinsView> entry: viewList.entrySet()){
-            if(builder.getFields().size() >= 25){
-                builder.setFooter("too many views ! consider check jenkins for complete information.");
+            if(builder.getFields().size() >= fieldSize){
+                builder.addField(":triangular_flag_on_post: Too many views !", "check [this url](" + generateViewListDetailLink(viewList) + ") for complete information.", false);
+//                builder.setFooter("too many views ! consider check jenkins for complete information.");
                 break;
             }
             String viewName = entry.getKey();
@@ -392,6 +400,24 @@ public class IntentHandleService {
             builder.addField(new MessageEmbed.Field(viewName, generateViewLink(viewName), false));
         }
         return Collections.singletonList(builder.build());
+    }
+
+    /**
+     * create detail message of jenkins view
+     * save detail in database and return access url
+     * @param viewList target view hashmap
+     * @return access url
+     */
+    private String generateViewListDetailLink(HashMap<String, JenkinsView> viewList){
+        Gson gson = new Gson();
+        JsonArray result = new JsonArray();
+        for(Map.Entry<String, JenkinsView> entry: viewList.entrySet()){
+            JsonObject view = new JsonObject();
+            String viewName = entry.getKey();
+            view.addProperty(viewName, generateViewLink(viewName));
+            result.add(view);
+        }
+        return longMessageService.getUrl(longMessageService.addMessage(gson.toJson(result)));
     }
 
     /**
@@ -404,6 +430,7 @@ public class IntentHandleService {
     public List<MessageEmbed> getJenkinsViewDetailMsg(String viewName) throws RequestFailException {
         HashMap<String, JenkinsView> viewList = getAllJenkinsViews();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         JenkinsView targetView;
         if(viewName.equals("All"))
             targetView = viewList.get("all");
@@ -411,13 +438,15 @@ public class IntentHandleService {
             targetView = viewList.get(viewName);
         System.out.println(targetView);
         builder.setTitle("[Jenkins View] " + viewName);
+        builder.setDescription(generateViewLink(viewName));
         if(targetView == null){
             builder.setDescription("Nothing found in this view. Maybe view name typo ?");
             return Collections.singletonList(builder.build());
         }
         for(Map.Entry<String, JenkinsJob> view: targetView.getJobList().entrySet()){
-            if(builder.getFields().size() >= 25){
-                builder.setFooter("too many jobs ! check [this link]("+generateViewLink(viewName)+") for complete information.");
+            if(builder.getFields().size() >= fieldSize){
+                builder.addField(":triangular_flag_on_post: Too many jobs !", "check [this link]("+longMessageService.getUrl(longMessageService.addMessage(targetView.toString()))+") for complete information.", false);
+//                builder.setFooter("too many jobs ! check [this link]("+generateViewLink(viewName)+") for complete information.");
                 break;
             }
             String jobName = view.getKey();
@@ -503,6 +532,7 @@ public class IntentHandleService {
      */
     private List<MessageEmbed> missingJenkinsObjectName(IntentSet intent){
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setTitle("Something goes wrong");
 //        builder.setDescription("Seems like you are willing to query about some view or job but target name is missing.");
         builder.setDescription("Maybe service name is missing.\n" +
@@ -528,6 +558,7 @@ public class IntentHandleService {
         JsonObject buildStability = healthReport.get(0).getAsJsonObject();
         JsonObject testResult = healthReport.get(1).getAsJsonObject();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setTitle("[Jenkins Health Report] " + targetName);
         builder.addField(buildStability.get("description").getAsString().split(":")[0], buildStability.get("description").getAsString().split(":")[1].strip(), false);
         builder.addField(testResult.get("description").getAsString().split(":")[0], testResult.get("description").getAsString().split(":")[1].strip(), false);
@@ -546,6 +577,7 @@ public class IntentHandleService {
         String url = jenkinsEndpoint + query;
         ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_JSON_VALUE)));
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         Gson gson = new Gson();
         JsonObject jsonResp = gson.fromJson(resp.getBody(), JsonObject.class); // json object of complete response from endpoint
         JsonArray healthReport = jsonResp.get("healthReport").getAsJsonArray(); // health report: test result, build stability
@@ -606,6 +638,7 @@ public class IntentHandleService {
         Gson gson = new Gson();
         JsonObject result = gson.fromJson(resp.getBody(), JsonObject.class);
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setTitle("[Jenkins Last Build Result] " + jobName);
         builder.setDescription(result.get("lastBuild").getAsJsonObject().get("result").getAsString());
         return Collections.singletonList(builder.build());
@@ -624,12 +657,15 @@ public class IntentHandleService {
         JsonObject response = gson.fromJson(resp.getBody(), JsonObject.class);
         JsonArray pluginList = response.get("plugins").getAsJsonArray();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         builder.setTitle("Plugin Information");
         // create detail info using long message service
         builder.setDescription(longMessageService.getUrl(longMessageService.addMessage(pluginList.toString())));
         for(JsonElement element: pluginList){
-            if(builder.getFields().size() >=25){
-                builder.setFooter("too many plugins! check url for more detail information.");
+            if(builder.getFields().size() >= fieldSize){
+                builder.addField(":triangular_flag_on_post: Too many plugins !", "check url for more detail information.", false);
+//                builder.setFooter("too many plugins! check url for more detail information.");
+                break;
             }
             JsonObject plugin = element.getAsJsonObject();
             builder.addField(plugin.get("shortName").getAsString(), createJenkinsPluginDescription(plugin.get("version").getAsString(), plugin.get("hasUpdate").getAsBoolean(), plugin.get("active").getAsBoolean()), false);
@@ -677,7 +713,9 @@ public class IntentHandleService {
                 title = "Jenkins Log (All)";
         }
         String url = jenkinsEndpoint + query;
+        Gson gson = new Gson();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         try{
             ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
             Document doc = JenkinsXMLParser.loadXML(resp.getBody());
@@ -686,15 +724,16 @@ public class IntentHandleService {
             builder.setTitle(title);
             builder.setDescription(url);
             ArrayList<JenkinsLogEntry> entryList = resultLog.getEntries();
-            if(entryList == null){
+            if(entryList == null || entryList.size() == 0){
                 // no log found
                 builder.addField("No Log Found !", "log is current empty.", false);
                 System.out.println("[DEBUG][Jenkins Log Msg] no available log record found.");
                 return Collections.singletonList(builder.build());
             }
             for(JenkinsLogEntry log: entryList){
-                if(builder.getFields().size() >= 25) {
-                    builder.setFooter("too many logs, check url for complete information.");
+                if(builder.getFields().size() >= fieldSize) {
+                    builder.addField(":triangular_flag_on_post: Too many logs !", "check [this link](" + longMessageService.getUrl(longMessageService.addMessage(gson.toJson(entryList))) + ") for complete information.", false);
+//                    builder.setFooter("too many logs, check url for complete information.");
                     break;
                 }
                 builder.addField(log.getPublishedTime(), log.getContent(), false);
@@ -734,7 +773,9 @@ public class IntentHandleService {
                 buildType = "All Recent Build";
         }
         String url = jenkinsEndpoint + query;
+        Gson gson = new Gson();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         try{
             ResponseEntity<String> resp = fireBasicAuthJenkinsRequest(url, HttpMethod.GET, new HashMap<>(Collections.singletonMap("Accept", MediaType.APPLICATION_XML_VALUE)));
             Document doc = JenkinsXMLParser.loadXML(resp.getBody());
@@ -742,8 +783,9 @@ public class IntentHandleService {
             builder.setDescription(url);
             ArrayList<JenkinsBuildFeed> buildList = JenkinsXMLParser.parseJenkinsBuildAtomFeed(doc);
             for(JenkinsBuildFeed build: buildList){
-                if(builder.getFields().size() >= 25){
-                    builder.setFooter("too many builds, check url for complete information");
+                if(builder.getFields().size() >= fieldSize){
+                    builder.addField(":triangular_flag_on_post: Too many builds !", "check [this link](" + longMessageService.getUrl(longMessageService.addMessage(gson.toJson(buildList))) + ") for complete information.", false);
+//                    builder.setFooter("too many builds, check url for complete information");
                     break;
                 }
                 builder.addField(build.getJobName() + " #" + build.getBuildNumber(),
@@ -773,6 +815,7 @@ public class IntentHandleService {
      */
     public List<MessageEmbed> getJenkinsTestReportMsg(String service){
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         try {
             JenkinsTestReport report = getLastTestCaseDetail(service);
             builder.setTitle("[Jenkins Test Report] " + service);
@@ -783,14 +826,16 @@ public class IntentHandleService {
                                    "Detail: " + report.getReportDetailUrl());
             for(JenkinsTestSuite suite: report.getTestSuites()){
                 String suiteName = suite.getSuiteName();
-                if(builder.getFields().size() >= 25){
-                    builder.setFooter("too many test case, check url for more complete information.");
+                if(builder.getFields().size() >= fieldSize){
+                    builder.addField(":triangular_flag_on_post: Too many test case !", "check url for more complete information.", false);
+//                    builder.setFooter("too many test case, check url for more complete information.");
                     break;
                 }
                 for(JenkinsTestCase testCase: suite.getTestCases()){
-                    if(builder.getFields().size() >= 25){
+                    if(builder.getFields().size() >= fieldSize){
                         // set footer and return current builder result
-                        builder.setFooter("too many test case, check url for more complete information.");
+                        builder.addField(":triangular_flag_on_post: Too many test case !", "check url for more complete information.", false);
+//                        builder.setFooter("too many test case, check url for more complete information.");
                         break;
                     }
                     builder.addField("[" + suiteName + "] " + testCase.getName(),
@@ -814,10 +859,12 @@ public class IntentHandleService {
      * @return all jenkins report summary message
      */
     public List<MessageEmbed> jenkinsTestReportOverviewMsg(String viewName){
-        String query = "/api/json?depth=3&tree=views[name,url,jobs[name,lastBuild[id,duration,result,actions[*]{3,}]]]";
+//        String query = "/api/json?depth=3&tree=views[name,url,jobs[name,lastBuild[id,duration,result,actions[*]{3,}]]]";
+        String query = "/api/json?depth=3&tree=views[name,url,jobs[name,lastBuild[id,duration,result,actions[*]]]]";
         String url = jenkinsEndpoint + query;
         Gson gson = new Gson();
         EmbedBuilder builder = new EmbedBuilder();
+        builder.setColor(generateRandomLightColor());
         /* make sure view name 'all' always works */
         if(viewName.equals("ALL") || viewName.equals("All"))
             viewName = "all";
@@ -827,34 +874,49 @@ public class IntentHandleService {
             JsonObject json = gson.fromJson(resp.getBody(), JsonObject.class);
             JsonArray views = json.get("views").getAsJsonArray();
             int totalCountSum =0, skipCountSum = 0, failCountSum = 0, passCountSum = 0;
+            JsonArray jobReportResult = new JsonArray();
             for(JsonElement ele: views){
                 JsonObject view = ele.getAsJsonObject();
                 if(!view.get("name").getAsString().equals(viewName)) continue; // check view name
                 JsonArray jobList = view.get("jobs").getAsJsonArray(); // job list of target view
                 for(JsonElement job: jobList){
-                    JsonElement testObj = job.getAsJsonObject().get("lastBuild").getAsJsonObject().get("actions").getAsJsonArray().get(0);
+                    JsonElement testObj = job.getAsJsonObject().get("lastBuild").getAsJsonObject().get("actions").getAsJsonArray().get(3);
                     if(testObj == null) continue; // in case no test report found
                     JsonObject testReport = testObj.getAsJsonObject();
                     int total = testReport.get("totalCount").getAsInt();
                     int skip = testReport.get("skipCount").getAsInt();
                     int fail = testReport.get("failCount").getAsInt();
                     int pass = total - skip - fail;
+                    String jobName = job.getAsJsonObject().get("name").getAsString();
                     totalCountSum += total;
                     skipCountSum += skip;
                     failCountSum += fail;
-                    if(builder.getFields().size() < 25){
-                        String jobName = job.getAsJsonObject().get("name").getAsString();
+                    // set jsonObject to store current job test report
+                    JsonObject jobReportSum = new JsonObject();
+                    jobReportSum.addProperty("failCount", fail);
+                    jobReportSum.addProperty("skipCount", skip);
+                    jobReportSum.addProperty("passCount", pass);
+                    jobReportSum.addProperty("totalCount", total);
+                    jobReportSum.addProperty("jobName", jobName);
+                    // store current jsonObject in result jsonArray
+                    jobReportResult.add(jobReportSum);
+                    if(builder.getFields().size() < fieldSize){
                         builder.addField("[Job] " + jobName,
                                          "[TotalCount]: " + total + "\n" +
                                                "[PassCount]: " + pass + "\n" +
                                                "[FailCount]: " + fail + "\n" +
                                                "[SkipCount]: " + skip,
                                          false);
-                    }else{
-                        builder.setFooter("Too many jobs, check each job for details.");
+                    }else if (builder.getFields().size() == fieldSize){
+//                        builder.addField(":triangular_flag_on_post: Too many jobs !", "check link in footer for details.", false);
                     }
                 }
             }
+            if(builder.getFields().size() == fieldSize){
+                // assume there are too many jobs, add detail link field
+                builder.addField(":triangular_flag_on_post: Too many jobs !", "check [this link](" + longMessageService.getUrl(longMessageService.addMessage(gson.toJson(jobReportResult)))+ ") for details.", false);
+            }
+//            builder.setFooter(":triangular_flag_on_post: Check detail info [here](" + longMessageService.getUrl(longMessageService.addMessage(gson.toJson(jobReportResult))) + ")");
             passCountSum = totalCountSum - skipCountSum - failCountSum;
             builder.setDescription("**TotalCount:** " + totalCountSum + "\n" +
                                    "**PassCount:** " + passCountSum + "\n" +
@@ -867,8 +929,16 @@ public class IntentHandleService {
         return Collections.singletonList(builder.build());
     }
 
-    private float getTestCasePassRate(int totalCount, int skipCount, int failCount){
-        int passCount = totalCount - skipCount - failCount;
-        return (float) passCount / totalCount;
+    /**
+     * generate color by random r/g/b values
+     * add 0.5 to each random value to make sure every color is 'light'
+     * @return random color
+     */
+    private Color generateRandomLightColor(){
+        Random random = new Random();
+        float r = random.nextFloat() / 2f + 0.5f;
+        float g = random.nextFloat() / 2f + 0.5f;
+        float b = random.nextFloat() / 2f + 0.5f;
+        return new Color(r, g, b);
     }
 }
